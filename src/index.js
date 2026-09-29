@@ -11,7 +11,6 @@
  *   node src/index.js --lecturer L01    -> print only one lecturer's timetable
  *   node src/index.js --room LH-1       -> print only one room's timetable
  */
-
 const { validateTime } = require("./constraints");
 const { rooms, staff, requests } = require("./data");
 const { checkConflicts } = require("./conflicts");
