@@ -1,9 +1,7 @@
 # UOV Timetable – Prototype
 
-> This branch contains the backend prototype and the UI design. 
-
- **[View the UI Design on Figma](# Figma Prototype
-
+> This branch contains the backend prototype and the UI design.
+> 
 This document contains the Figma prototype for the **Automated University Timetable System**.
 
 ## Prototype Link
@@ -14,7 +12,7 @@ This document contains the Figma prototype for the **Automated University Timeta
 
 The Figma prototype demonstrates the proposed user interface, navigation, and main workflows of the **Automated University Timetable System**.
 
-It provides a visual representation of the system before the implementation of the final application.)** · Source file: [`design/UOV-Timetable.fig`](design/UOV-Timetable.fig)
+It provides a visual representation of the system before the implementation of the final application.)** ·
 
 
 ## What it demonstrates
