@@ -1,0 +1,21 @@
+{
+  "name": "automated-university-timetable-system",
+  "version": "1.0.0",
+  "description": "A web-based university timetable management system for automated timetable generation, conflict detection, resource management, timetable access, notifications, and report generation.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maheli10/Automated-University-Timetable-System.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Maheli10/Automated-University-Timetable-System/issues"
+  },
+  "homepage": "https://github.com/Maheli10/Automated-University-Timetable-System#readme"
+}
