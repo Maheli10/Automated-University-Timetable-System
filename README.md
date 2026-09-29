@@ -1,52 +1,72 @@
-# UOV Automated University Timetable System
+# UOV Timetable – Prototype
 
-A full-stack timetable administration workspace for the Faculty of Applied Science at the University of Vavuniya. The application combines a responsive university admin dashboard with persistent relational records for staff, teaching spaces, sessions, and staff assignments.
+> This branch contains the backend prototype and the UI design. 
 
-## What is implemented
+ **[View the UI Design on Figma](# Figma Prototype
 
-The dashboard opens directly on a Monday–Friday weekly timetable with a white and maroon visual system. Sessions are displayed by actual start and end times, remain visible when cancelled, and can be filtered by subject, staff, room, batch, and class type. Session cards expose details such as subject, staff contact, room, participants, duration, schedule type, and status. Browser print and PDF export are available through the print dialog.
+This document contains the Figma prototype for the **Automated University Timetable System**.
 
-The session workflow calculates duration from the selected interval and submits through a typed API that checks partial overlaps, not merely matching start times. It blocks room, staff, batch/group, capacity, maintenance, and suitability conflicts with readable messages. Cancelled sessions are excluded from active booking checks so their rooms become available again. Available Places ranks suitable rooms by capacity fit and facilities, while staff, room, staff-schedule, and room-schedule views provide responsive administration surfaces.
+## Prototype Link
 
-The scheduling engine now applies a configurable university constraint policy to both manual saves and automatic generation. The default policy protects 08:30–16:30 working hours, the 10:20–10:40 official break, the 12:30–13:30 lunch break, fixed practical slots, blocked university events, maximum daily batch classes, maximum daily practical sessions, and unnecessary same-subject repeats on one day. It also continues to enforce lecturer availability, lecturer daily/weekly workload, room capacity, room suitability, batch clashes, lecturer clashes, and room clashes.
+[View the UOV Timetable Figma Prototype](https://www.figma.com/make/e3tbvJiYPRd2YuUb3iQ4Se/UOV-Time-Table?t=w2PEIjsqih307V0W-20&fullscreen=1)
 
-Administrators can open **Content & Notifications → University constraint policy** and edit the JSON policy. This provides an extension point for future university rules such as ceremonies, examinations, faculty meetings, semester-specific blocked periods, department working hours, and custom rule metadata without changing the timetable screens. The policy is stored in `app_settings` under `constraintPolicy`, and the generator reads it on each run.
+## Description
 
-## Technology
+The Figma prototype demonstrates the proposed user interface, navigation, and main workflows of the **Automated University Timetable System**.
 
-The project uses React 19, TypeScript, Tailwind CSS 4, Vite, Express, tRPC, Drizzle ORM, and a MySQL-compatible relational database provided through `DATABASE_URL`. Authentication infrastructure is supplied by the project template. The schema and migration SQL live under `drizzle/`; server procedures are defined in `server/routers.ts` and consumed through the typed client.
+It provides a visual representation of the system before the implementation of the final application.)** · Source file: [`design/UOV-Timetable.fig`](design/UOV-Timetable.fig)
 
-## Local setup
 
-```bash
-pnpm install
-pnpm dev
+## What it demonstrates
+1. **Time validation** – working hours, breaks, fixed practical slots, blocked events
+2. **Automatic weekly timetable generation** – lecturer, room, batch, workload and availability rules
+3. **Manual booking conflict detection** – room / lecturer / batch overlap, capacity, maintenance, room suitability
+4. **Workload summary** – per lecturer and per room
+
+## Project structure
+```
+src/
+├── constraints.js   Policy (hours, breaks, slots) + time validation
+├── data.js          Sample rooms, staff and weekly requests
+├── conflicts.js     Manual booking conflict detection
+├── generator.js     Automatic weekly generator
+├── output.js        Timetable printing helpers
+└── index.js         Entry point: demo + command-line options
 ```
 
-For a local teacher presentation without university OAuth credentials, use the explicit local-only demo mode:
+## How to run
+Requires **Node.js 18 or newer** (check with `node -v`).
 
-```bash
-pnpm demo
+```
+npm start                          # full demo
+node src/index.js --json           # generated plan as JSON
+node src/index.js --batch Y3-S1    # one batch's timetable
+node src/index.js --lecturer L01   # one lecturer's timetable
+node src/index.js --room LH-1      # one room's timetable
 ```
 
-Then open `http://localhost:3000/` and choose **Open local demo**. Normal `pnpm dev` remains OAuth-based; `pnpm demo` is the only command that enables the local demo session.
+**Expected output:** 
+3 of 4 time checks rejected; 11 sessions placed with 1 warning (`XX9999` has no lecturer, on purpose); 6 of 7 manual bookings rejected with reasons; workload per lecturer and room.
 
-The required environment is supplied by the Manus project runtime. For an external local database, set `DATABASE_URL` to a MySQL-compatible connection string and keep the existing authentication variables configured by the scaffold. Apply the generated migration with the project database workflow before using persistent create and update operations.
+To try other scenarios, edit the sample data in `src/data.js` (rooms, staff, requests) or the rules in `src/constraints.js`, then run again.
 
-## Quality checks
+## Team & work division
 
-```bash
-pnpm check
-pnpm test
-pnpm build
-```
+**Member 1- Parami/2022ICT41:**
+- Files: `src/generator.js`, `src/index.js`, `README.md`, `package.json`
+- Responsibility: automatic generator, demo runner and command-line options, documentation
+**UI design**
+- Files: Figma link, `design/`
+- Responsibility: UI design of the system
 
-The test suite covers authentication logout behavior, partial-overlap detection, back-to-back sessions, protected breaks, practical-slot enforcement, and blocked university periods. The application deliberately keeps timetable rendering usable when a database has no records yet, while all create and update mutations require the configured persistent database.
 
-## Key routes and procedures
+**Member 2 – (name)**
+- Files: `src/constraints.js`, `src/output.js`
+- Responsibility: constraint policy, time validation, timetable printing
 
-The UI routes are `/`, `/sessions`, `/rooms`, `/staff`, `/staff-schedules`, and `/room-schedules`. The server exposes typed procedures for listing, creating, and updating staff and rooms; listing, creating, updating, and cancelling sessions; validating conflicts; checking availability; and retrieving staff assignments. Because procedures are typed end to end, the UI receives validation errors without custom request wrappers.
+**Member 3 – (name)**
+- Files: `src/data.js`, `src/conflicts.js`
+- Responsibility: sample data, booking conflict detection
 
-## Operational notes
-
-The current preview includes representative timetable content so the primary experience is visible immediately. Production records are stored through the Drizzle schema rather than embedded in the UI. The optional administrator-notification hook is represented as a natural extension point around cancellation, rescheduling, and rejected conflict mutations; wiring a specific notification provider requires the administrator's preferred channel and credentials.
+## Limitation
+No database, login, roles, notifications or approval flow. The generator is greedy (first fit), and each subject has one lecturer.
