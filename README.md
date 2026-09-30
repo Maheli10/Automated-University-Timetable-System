@@ -58,7 +58,7 @@ To try other scenarios, edit the sample data in `src/data.js` (rooms, staff, req
 - Responsibility: UI design of the system
 
 
-**Member 2 – (name)**
+**Member 2 – Navoda(2022/ICT/51)**
 - Files: `src/constraints.js`, `src/output.js`
 - Responsibility: constraint policy, time validation, timetable printing
 
