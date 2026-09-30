@@ -62,7 +62,7 @@ To try other scenarios, edit the sample data in `src/data.js` (rooms, staff, req
 - Files: `src/constraints.js`, `src/output.js`
 - Responsibility: constraint policy, time validation, timetable printing
 
-**Member 3 – (name)**
+**Member 3 – Bawani(2022/ICT/54)**
 - Files: `src/data.js`, `src/conflicts.js`
 - Responsibility: sample data, booking conflict detection
 
