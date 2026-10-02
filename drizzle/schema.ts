@@ -11,11 +11,6 @@ import {
 } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
-/**
- * NOTE: the database tables are created/updated automatically at start-up by
- * `server/setupSchema.ts` (also runnable with `pnpm db:push`). Keep the two in
- * sync when adding columns.
- */
 /** Declared course catalogue (one row per course unit). */
 export const courses = mysqlTable(
   "courses",
@@ -138,7 +133,27 @@ export const sessionExceptions = mysqlTable(
   })
 );
 
+export const appSettings = mysqlTable("app_settings", {
+  settingKey: varchar("settingKey", { length: 120 }).primaryKey(),
+  settingValue: mediumtext("settingValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
 
+export const notices = mysqlTable(
+  "notices",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    title: varchar("title", { length: 200 }).notNull(),
+    message: text("message").notNull(),
+    audience: varchar("audience", { length: 16 }).default("all").notNull(),
+    /** JSON array of user ids, or null for the whole audience */
+    recipients: mediumtext("recipients"),
+    authorId: int("authorId"),
+    expiresAt: varchar("expiresAt", { length: 16 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => ({ createdIdx: index("notices_created_idx").on(t.createdAt) })
+);
 
 export const generationRuns = mysqlTable("generation_runs", {
   id: int("id").autoincrement().primaryKey(),
@@ -173,11 +188,12 @@ export const timetableSwaps = mysqlTable(
     statusIdx: index("timetable_swaps_status_idx").on(t.status),
   })
 );
-
-
+export type Course = typeof courses.$inferSelect;
 export type CourseLecturer = typeof courseLecturers.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type SessionStaff = typeof sessionStaff.$inferSelect;
 export type SessionException = typeof sessionExceptions.$inferSelect;
+export type AppSetting = typeof appSettings.$inferSelect;
+export type Notice = typeof notices.$inferSelect;
 export type GenerationRun = typeof generationRuns.$inferSelect;
 export type TimetableSwap = typeof timetableSwaps.$inferSelect;
