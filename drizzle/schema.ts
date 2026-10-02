@@ -11,6 +11,32 @@ import {
 } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
+export const users = mysqlTable("users", {
+  id: int("id").autoincrement().primaryKey(),
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  passwordHash: varchar("passwordHash", { length: 180 }),
+  mustChangePassword: int("mustChangePassword").default(1).notNull(),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["student", "lecturer", "admin"]).default("student").notNull(),
+  roleTitle: varchar("roleTitle", { length: 80 }),
+  studentId: varchar("studentId", { length: 80 }),
+  registrationNo: varchar("registrationNo", { length: 80 }),
+  academicYear: varchar("academicYear", { length: 20 }),
+  phone: varchar("phone", { length: 40 }),
+  qualifications: text("qualifications"),
+  staffCode: varchar("staffCode", { length: 32 }),
+  batch: varchar("batch", { length: 64 }),
+  /** Degree programme of a student: IT or AMC */
+  program: varchar("program", { length: 16 }),
+  /** Current level (year of study) of a student: 1-4 */
+  level: int("level"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
 /** Declared course catalogue (one row per course unit). */
 export const courses = mysqlTable(
   "courses",
@@ -188,6 +214,9 @@ export const timetableSwaps = mysqlTable(
     statusIdx: index("timetable_swaps_status_idx").on(t.status),
   })
 );
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 export type CourseLecturer = typeof courseLecturers.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
