@@ -1,0 +1,10 @@
+code,name,type,capacity,department,building,floor,equipment,accessibility,status,availabilityNotes
+LH-01,Lecture Hall 1,Lecture Hall,120,Faculty of Applied Science,1,1,"Projector;Audio,Whiteboard",Ramp access,available,
+LH-02,Lecture Hall 2,Lecture Hall,80,Faculty of Applied Science,1,1,"Projector;Audio,Whiteboard",Ramp access,available,
+LH-03,Lecture Hall 3,Lecture Hall,120,Faculty of Applied Science,1,1,"Projector;Audio,Whiteboard",Ramp access,available,
+CL-01,Lab,Lab,130,Faculty of Applied Science,1,Ground Floor,"Projector;Whiteboard,computer",Ramp access,available,
+CL-02,Lab,Lab,80,Faculty of Applied Science,1,Ground Floor,"Projector;Whiteboard,computer",Ramp access,available,
+CL-03,Lab,Lab,40,Faculty of Applied Science,1,Ground Floor,"Projector;Whiteboard,computer",Ramp access,available,
+LBH-01,Library Hall 1,Lecture Hall,120,Faculty of Business,2,2,"Projector;AudioProjector;Audio,Whiteboard",Ramp access,available,
+LBH-02,Library Hall 2,Lecture Hall,100,Faculty of Business,2,2,"Projector;AudioProjector;Audio,Whiteboard",Ramp access,available,
+LBH-03,Library Hall 3,Lecture Hall,80,Faculty of Business,2,2,"Projector;AudioProjector;Audio,Whiteboard",Ramp access,available,
