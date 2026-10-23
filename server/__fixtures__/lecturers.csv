@@ -1,0 +1,24 @@
+staffCode,name,email,phone,qualification,roleTitle,department,1.1,1.2,2.1,2.2,3.1,3.2,4.1,4.2
+DPS-001,Mr. S. Kuhanesan,kuhan9@vau.ac.lk,,PHD in univerty of jaffna,Senior Lecturer Gr.I,Physical Science,"IT1113,ACU1113",IT1252,,,,CSC3213,IT4113,
+DPS-002,Mr. B. Yogarajah,yoganbala@vau.ac.lk,,,Senior Lecturer Gr. I,Physical Science,AMA1113,AMA1213,AMA2113,AMA2213,AMA3122,,IT4133,IT4216
+DPS-003,Mr. S. Thirukumaran,thirukumaran@vau.ac.lk,,,Senior Lecturer Gr. I,Physical Science,IT1122,IT1262,IT2153,CSC2212,CSC3112,CSC3222,IT4142,IT4226
+DPS-004,Dr. R. Nagulan,nagulanr@vau.ac.lk,,,Senior Lecturer Gr.I,Physical Science,PMA1113,PMA1213,PMA2113,PMA2213,CSC3123,CSH3242,EL4112,CSH4216
+DPS-005,Mr. S. S. Suthaharan,suthaharan@vau.ac.lk,,,Senior Lecturer Gr.I,Physical Science,IT1134,IT1242,,,CSC3132,CSH3254,EL4122,CSH4226
+DPS-006,Dr. S. Kirushanth,SivaramalingamK@vau.ac.lk,,,Senior Lecturer Gr.I,Physical Science,IT1144,IT1214,IT2114,IT2244,CSH3143,CSH3263,EL4132,
+DPS-007,Ms. R. Yasotha,yasotha@vau.ac.lk,,,Senior Lecturer Gr.I,Physical Science,,IT1223,IT2122,IT2212,CSH3153,CSH3273,IT4123,
+DPS-008,Mr. T. Jeyamugan,tjeyamugan@vau.ac.lk,,,Senior Lecturer Gr.I,Physical Science,STA1113,IT1214,,STA2213,CSH3163,,EL4142,
+DPS-009,Mr. N. Edwin Linosh,linosh85@vau.ac.lk,,,Senior Lecturer Gr. I,Physical Science,CSC1113,CSC1223,CSC2122,CSC2222,,,EL4152,
+DPS-010,Mr. S. Thilaganathan,thilak@vau.ac.lk,,,Senior Lecturer Gr.I,Physical Science,CSC1123,CSC1213,CSC2113,CSC2234,,,EL4162,
+DPS-011,Dr. M. Kayanan,kayanan@vau.ac.lk,,,Senior Lecturer Gr. I,Physical Science,IT1152,STA1213,STA2113,,,,EL4172,
+DPS-012,Ms. S. Subaramya,subaramya@vau.ac.lk,,,Senior Lecturer Gr II,Physical Science,IT1113,IT1232,IT2133,IT2234,IT3133,IT3213,IT4133,
+DPS-013,Dr. T. Kartheeswaran,karthees@vau.ac.lk,,,Senior Lecturer Gr. II,Physical Science,IT1144,,IT2143,IT2252,IT3143,IT3243,IT4153,
+DPS-014,Ms. A.V. Ann Sinthusha,annsinthusha@vau.ac.lk,,,Senior Lecturer Gr. II,Physical Science,IT1134,IT1232,IT2114,IT2223,IT3162,,EL4182,
+DPS-015,Mr. G. Vijayakanthan,g.vijayakanthan@vau.ac.lk,,,Lecturer (Prob.) (On Study Leave),Physical Science,,,,,,,,
+DPS-016,Mr. N. Kajan,kajan@vau.ac.lk,,,Lecturer (Prob.) (On Study Leave),Physical Science,,,,,,,,
+DPS-017,Ms. S. Sobana,sobana@vau.ac.lk,,,Lecturer (Prob.),Physical Science,IT3113,IT1252,IT2114,,IT3113,IT3232,EL4192,
+DPS-018,Ms. Bramyah Sinthathurai,bramyah@vau.ac.lk,,,Lecturer (Probationary),Physical Science,,IT1223,IT2153,IT2244,,,CSH4112,
+DPS-019,Ms. Sivasoruby Kanapathipillai,sivasorubyk@vau.ac.lk,,,Lecturer (Probationary),Physical Science,,,IT2133,IT2234,IT3152,,CSH4123,
+DPS-020,Mr. Vasanthan Athiththan,athiththanv@vau.ac.lk,,,Lecturer (Probationary),Physical Science,,,It2143,IT2223,IT3122,IT3252,CSH4133,
+DPS-021,Mr. Ilankkanakumaran Hariharan,hariharan@vau.ac.lk,,,Lecturer (Probationary),Physical Science,,,It2153,IT2223,IT3133,IT3262,CSH4144,
+DPS-022,Mr. Konesalingam Moulis,moulis@vau.ac.lk,,,Lecturer (Probationary),Physical Science,AMA1213,PMA1213,STA2113,,,,CSH4152,
+DPS-023,Mrs. Thayaparan Kayathiri,tkaya@vau.ac.lk,,,Lecturer (Probationary),Physical Science,PMA1113,AMA1213,AMA2122,AMA2213,,,"CSH4162,CSH4173",
