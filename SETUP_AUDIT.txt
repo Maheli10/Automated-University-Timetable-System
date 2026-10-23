@@ -1,0 +1,19 @@
+Audit result
+============
+
+Checked against the original uov-timetable-work repository.
+
+Included:
+- package manager/config: package.json, pnpm-lock.yaml, tsconfig.json, vite.config.ts, vitest.config.ts, drizzle.config.ts, components.json
+- environment/Git formatting: .env.example, .gitignore, .prettierignore, .prettierrc
+- client/server/shared bootstrap files
+- database setup scripts
+- patches/wouter@3.7.1.patch (required by package.json pnpm.patchedDependencies)
+- optional run-uov-timetable launch helpers
+
+Intentionally excluded:
+- all 20 feature implementation files
+- .env and secrets
+- node_modules, dist and logs
+- migrations/schema/relations that belong to the feature/database package
+- platform metadata files
