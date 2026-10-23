@@ -11,6 +11,88 @@ import {
 } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
+/**
+ * NOTE: the database tables are created/updated automatically at start-up by
+ * `server/setupSchema.ts` (also runnable with `pnpm db:push`). Keep the two in
+ * sync when adding columns.
+ */
+
+export const users = mysqlTable("users", {
+  id: int("id").autoincrement().primaryKey(),
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  passwordHash: varchar("passwordHash", { length: 180 }),
+  mustChangePassword: int("mustChangePassword").default(1).notNull(),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["student", "lecturer", "admin"]).default("student").notNull(),
+  roleTitle: varchar("roleTitle", { length: 80 }),
+  studentId: varchar("studentId", { length: 80 }),
+  registrationNo: varchar("registrationNo", { length: 80 }),
+  academicYear: varchar("academicYear", { length: 20 }),
+  phone: varchar("phone", { length: 40 }),
+  qualifications: text("qualifications"),
+  staffCode: varchar("staffCode", { length: 32 }),
+  batch: varchar("batch", { length: 64 }),
+  /** Degree programme of a student: IT or AMC */
+  program: varchar("program", { length: 16 }),
+  /** Current level (year of study) of a student: 1-4 */
+  level: int("level"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export const staff = mysqlTable(
+  "staff",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    staffCode: varchar("staffCode", { length: 32 }).notNull().unique(),
+    name: varchar("name", { length: 160 }).notNull(),
+    role: varchar("role", { length: 64 }).notNull(),
+    department: varchar("department", { length: 120 }).notNull(),
+    email: varchar("email", { length: 320 }),
+    telephone: varchar("telephone", { length: 32 }),
+    qualification: text("qualification"),
+    expertise: text("expertise"),
+    availability: text("availability"),
+    status: mysqlEnum("status", ["active", "on-leave"]).default("active").notNull(),
+    maxDailyMinutes: int("maxDailyMinutes").default(480).notNull(),
+    maxWeeklyMinutes: int("maxWeeklyMinutes").default(2400).notNull(),
+    preferredTimes: text("preferredTimes"),
+    preferredRooms: text("preferredRooms"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  t => ({
+    codeIdx: index("staff_code_idx").on(t.staffCode),
+    statusIdx: index("staff_status_idx").on(t.status),
+  })
+);
+
+export const rooms = mysqlTable(
+  "rooms",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    name: varchar("name", { length: 160 }).notNull(),
+    type: varchar("type", { length: 64 }).notNull(),
+    capacity: int("capacity").notNull(),
+    department: varchar("department", { length: 120 }),
+    building: varchar("building", { length: 120 }),
+    floor: varchar("floor", { length: 32 }),
+    equipment: text("equipment"),
+    accessibility: varchar("accessibility", { length: 120 }),
+    status: mysqlEnum("status", ["available", "maintenance"]).default("available").notNull(),
+    availabilityNotes: text("availabilityNotes"),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  t => ({
+    typeIdx: index("rooms_type_idx").on(t.type),
+    statusIdx: index("rooms_status_idx").on(t.status),
+  })
+);
+
 /** Declared course catalogue (one row per course unit). */
 export const courses = mysqlTable(
   "courses",
@@ -188,6 +270,11 @@ export const timetableSwaps = mysqlTable(
     statusIdx: index("timetable_swaps_status_idx").on(t.status),
   })
 );
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+export type Staff = typeof staff.$inferSelect;
+export type Room = typeof rooms.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type CourseLecturer = typeof courseLecturers.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
