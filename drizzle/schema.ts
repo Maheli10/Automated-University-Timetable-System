@@ -231,12 +231,60 @@ export const notices = mysqlTable(
     /** JSON array of user ids, or null for the whole audience */
     recipients: mediumtext("recipients"),
     authorId: int("authorId"),
+    publicationSource: varchar("publicationSource", { length: 16 }).default("system").notNull(),
     expiresAt: varchar("expiresAt", { length: 16 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   t => ({ createdIdx: index("notices_created_idx").on(t.createdAt) })
 );
 
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  recipientUserId: int("recipientUserId").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 40 }).notNull().default("announcement"),
+  isRead: int("isRead").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  academicYear: varchar("academicYear", { length: 32 }),
+  semester: int("semester"),
+  sessionId: int("sessionId"),
+}, t => ({ recipientIdx: index("notifications_recipient_idx").on(t.recipientUserId, t.isRead) }));
+export const semesterArchives = mysqlTable("semester_archives", {
+  id: int("id").autoincrement().primaryKey(),
+  academicYear: varchar("academicYear", { length: 32 }).notNull(),
+  semester: int("semester").notNull(),
+  publishedAt: timestamp("publishedAt").defaultNow().notNull(),
+  publishedBy: int("publishedBy"),
+  publisherName: varchar("publisherName", { length: 200 }),
+  generationRunId: int("generationRunId").notNull(),
+  sessionCount: int("sessionCount").notNull().default(0),
+  changeCount: int("changeCount").notNull().default(0),
+  cancellationCount: int("cancellationCount").notNull().default(0),
+  finalStatus: varchar("finalStatus", { length: 40 }).notNull().default("published"),
+});
+export const archivedSessions = mysqlTable("archived_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  archiveId: int("archiveId").notNull(),
+  sourceSessionId: int("sourceSessionId"),
+  academicYear: varchar("academicYear", { length: 32 }),
+  semester: int("semester"),
+  program: varchar("program", { length: 16 }),
+  level: int("level"),
+  lecturerIds: mediumtext("lecturerIds"),
+  batch: varchar("batch", { length: 64 }),
+  snapshot: mediumtext("snapshot").notNull(),
+});
+export const timetableChangeHistory = mysqlTable("timetable_change_history", {
+  id: int("id").autoincrement().primaryKey(),
+  academicYear: varchar("academicYear", { length: 32 }),
+  semester: int("semester").notNull(),
+  sessionId: int("sessionId"),
+  changeType: varchar("changeType", { length: 40 }).notNull(),
+  message: text("message").notNull(),
+  changedBy: int("changedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
 export const generationRuns = mysqlTable("generation_runs", {
   id: int("id").autoincrement().primaryKey(),
   semester: int("semester").notNull(),
