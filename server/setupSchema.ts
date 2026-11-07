@@ -202,12 +202,32 @@ const tables: Record<string, { create: string; columns: ColumnMap }> = {
       \`audience\` varchar(16) NOT NULL DEFAULT 'all',
       \`recipients\` mediumtext,
       \`authorId\` int,
+      \`publicationSource\` varchar(16) NOT NULL DEFAULT 'system',
       \`expiresAt\` varchar(16),
       \`createdAt\` timestamp NOT NULL DEFAULT (now()),
       CONSTRAINT \`notices_id\` PRIMARY KEY(\`id\`)
     )`,
-    columns: {},
+    columns: { publicationSource: "varchar(16) NOT NULL DEFAULT 'system'" },
   },
+  notifications: { create: `CREATE TABLE IF NOT EXISTS \`notifications\` (
+    \`id\` int AUTO_INCREMENT NOT NULL, \`recipientUserId\` int NOT NULL, \`title\` varchar(200) NOT NULL,
+    \`message\` text NOT NULL, \`type\` varchar(40) NOT NULL DEFAULT 'announcement', \`isRead\` int NOT NULL DEFAULT 0,
+    \`createdAt\` timestamp NOT NULL DEFAULT (now()), \`academicYear\` varchar(32), \`semester\` int, \`sessionId\` int,
+    CONSTRAINT \`notifications_id\` PRIMARY KEY(\`id\`))`, columns: {} },
+  semester_archives: { create: `CREATE TABLE IF NOT EXISTS \`semester_archives\` (
+    \`id\` int AUTO_INCREMENT NOT NULL, \`academicYear\` varchar(32) NOT NULL, \`semester\` int NOT NULL,
+    \`publishedAt\` timestamp NOT NULL DEFAULT (now()), \`publishedBy\` int, \`publisherName\` varchar(200),
+    \`generationRunId\` int NOT NULL, \`sessionCount\` int NOT NULL DEFAULT 0, \`changeCount\` int NOT NULL DEFAULT 0,
+    \`cancellationCount\` int NOT NULL DEFAULT 0, \`finalStatus\` varchar(40) NOT NULL DEFAULT 'published',
+    CONSTRAINT \`semester_archives_id\` PRIMARY KEY(\`id\`))`, columns: {} },
+  archived_sessions: { create: `CREATE TABLE IF NOT EXISTS \`archived_sessions\` (
+    \`id\` int AUTO_INCREMENT NOT NULL, \`archiveId\` int NOT NULL, \`sourceSessionId\` int, \`academicYear\` varchar(32),
+    \`semester\` int, \`program\` varchar(16), \`level\` int, \`lecturerIds\` mediumtext, \`batch\` varchar(64),
+    \`snapshot\` mediumtext NOT NULL, CONSTRAINT \`archived_sessions_id\` PRIMARY KEY(\`id\`))`, columns: {} },
+  timetable_change_history: { create: `CREATE TABLE IF NOT EXISTS \`timetable_change_history\` (
+    \`id\` int AUTO_INCREMENT NOT NULL, \`academicYear\` varchar(32), \`semester\` int NOT NULL, \`sessionId\` int,
+    \`changeType\` varchar(40) NOT NULL, \`message\` text NOT NULL, \`changedBy\` int,
+    \`createdAt\` timestamp NOT NULL DEFAULT (now()), CONSTRAINT \`timetable_change_history_id\` PRIMARY KEY(\`id\`))`, columns: {} },
   generation_runs: {
     create: `CREATE TABLE IF NOT EXISTS \`generation_runs\` (
       \`id\` int AUTO_INCREMENT NOT NULL,
