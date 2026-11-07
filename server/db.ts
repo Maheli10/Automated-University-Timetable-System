@@ -13,7 +13,7 @@ import {
   courses,
   courseLecturers,
   notices,
-  generationRuns,
+  generationRuns, notifications, semesterArchives, archivedSessions, timetableChangeHistory,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { ensureSchema } from "./setupSchema";
@@ -210,5 +210,5 @@ export {
   sessionStaff,
   sessionExceptions,
   appSettings,
-  timetableSwaps,
+  timetableSwaps, notifications, semesterArchives, archivedSessions, timetableChangeHistory,
 };

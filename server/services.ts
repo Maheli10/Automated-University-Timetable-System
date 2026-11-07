@@ -10,7 +10,7 @@ import {
   listSessionExceptions,
   listRooms,
   appSettings,
-  notices,
+  notices, notifications,
 } from "./db";
 import { sendEmail } from "./email";
 import {
@@ -93,19 +93,35 @@ export async function publishNotice(notice: {
   expiresAt?: string;
   recipientUserIds?: number[];
   authorId?: number;
+  displayOnNotices?: boolean;
+  academicYear?: string;
+  semester?: number;
+  sessionId?: number;
 }) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(notices).values({
-    title: notice.title.slice(0, 200),
-    message: notice.message,
-    audience: notice.audience,
-    recipients: notice.recipientUserIds?.length
-      ? JSON.stringify(notice.recipientUserIds)
-      : null,
-    authorId: notice.authorId ?? null,
-    expiresAt: notice.expiresAt || null,
-  });
+  if (notice.displayOnNotices) {
+    await db.insert(notices).values({
+      title: notice.title.slice(0, 200),
+      message: notice.message,
+      audience: notice.audience,
+      recipients: notice.recipientUserIds?.length ? JSON.stringify(notice.recipientUserIds) : null,
+      authorId: notice.authorId ?? null,
+      publicationSource: "published",
+      expiresAt: notice.expiresAt || null,
+    });
+  }
+  const recipients = (await listUsers()).filter(user =>
+    notice.recipientUserIds?.length
+      ? notice.recipientUserIds.includes(user.id)
+      : notice.audience === "all" || user.role === notice.audience
+  );
+  if (recipients.length) await db.insert(notifications).values(recipients.map(user => ({
+    recipientUserId: user.id, title: notice.title.slice(0, 200), message: notice.message,
+    type: /cancel/i.test(notice.title) ? "cancellation" : /change|resched/i.test(notice.title) ? "change" : /publish/i.test(notice.title) ? "publication" : "announcement",
+    academicYear: notice.academicYear || null, semester: notice.semester || null,
+    sessionId: notice.sessionId || null,
+  })));
 }
 
 export async function emailUsers(
@@ -268,6 +284,7 @@ export type SessionCheckInput = {
   participantCount: number;
   staffIds: number[];
   requirements?: string | null;
+  ignoreTimeConstraints?: boolean;
 };
 
 export async function findConflicts(input: SessionCheckInput) {
@@ -315,7 +332,9 @@ export async function findConflicts(input: SessionCheckInput) {
       String(input.batch).trim().toLowerCase()
     );
   };
-  const issues: string[] = [...validateTimeConstraints(input, policy)];
+  const issues: string[] = input.ignoreTimeConstraints
+    ? []
+    : [...validateTimeConstraints(input, policy)];
   const sameDayCohort = active.filter(row => sharesCohort(row.session));
   if (sameDayCohort.length >= policy.maxBatchClassesPerDay)
     issues.push(
