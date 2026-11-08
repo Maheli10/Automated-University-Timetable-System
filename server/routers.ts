@@ -35,7 +35,7 @@ import {
   courses,
   courseLecturers,
   notices,
-  generationRuns,
+  generationRuns, notifications, semesterArchives, archivedSessions, timetableChangeHistory,
   getUserByEmail,
   getUserById,
   listSwaps,
@@ -439,6 +439,17 @@ async function notifyConfigured(
   }).catch(() => undefined);
 }
 
+async function markTimetableChangePending(
+  semesterValue: unknown,
+  message: string
+) {
+  const semester = semesterNumber(String(semesterValue ?? ""));
+  if (!semester) return;
+  await saveSetting(`timetablePending:${semester}`, { message, updatedAt: new Date().toISOString() });
+  const db = await getDb();
+  if (db) { const academic = await academicSettings(); await db.insert(timetableChangeHistory).values({ academicYear: academic.academicYear, semester, changeType: /cancel/i.test(message) ? "cancellation" : "change", message }); }
+}
+
 const sessionInput = z.object({
   subjectCode: z.string().min(2),
   subjectName: z.string().min(2),
@@ -489,7 +500,10 @@ const looseRows = z.array(z.record(z.string(), z.any())).min(1).max(5000);
 // ---------------------------------------------------------------------------
 // Session enrichment for the UI
 // ---------------------------------------------------------------------------
-async function enrichedSessions(filter?: { semester?: number | null }) {
+async function enrichedSessions(
+  filter?: { semester?: number | null },
+  includeDrafts = true
+) {
   const [rows, assignments, staffRows, courseRows] = await Promise.all([
     listSessions(),
     getAssignments(),
@@ -499,11 +513,23 @@ async function enrichedSessions(filter?: { semester?: number | null }) {
   const staffById = new Map(staffRows.map(person => [person.id, person]));
   const courseById = new Map(courseRows.map(course => [course.id, course]));
   const courseByCode = new Map(courseRows.map(course => [course.code, course]));
+  const publishedRunId =
+    !includeDrafts && filter?.semester
+      ? await settingJson<number | null>(
+          `timetablePublished:${filter.semester}`,
+          null
+        )
+      : null;
   return rows
     .filter(row => {
       if (!filter?.semester) return true;
       const value = semesterNumber(row.session.semester);
-      return !value || value === filter.semester;
+      if (value && value !== filter.semester) return false;
+      return (
+        includeDrafts ||
+        !row.session.generationRunId ||
+        row.session.generationRunId === publishedRunId
+      );
     })
     .map(row => {
       const people = assignments
@@ -2136,20 +2162,88 @@ export const appRouter = router({
           if (staffValues.length)
             await db.insert(sessionStaff).values(staffValues);
         }
-        if (input.notify && result.placements.length)
-          await publishNotice({
-            title: `Semester ${input.semester} timetable published`,
-            message: `The ${academic.academicYear} Semester ${input.semester} timetable has been generated (${result.placements.length} weekly sessions). Open “My timetable” to see your classes.`,
-            audience: "all",
-            authorId: ctx.user.id,
-          });
         return { runId, removed, ...result };
       }),
-    runs: adminProcedure.query(async () =>
-      (await listGenerationRuns())
+    /** Publish a generated draft only after the administrator confirms its final state. */
+    publish: adminProcedure
+      .input(
+        z.object({
+          runId: z.number().int().positive(),
+          confirmClashes: z.boolean().default(false),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await requireDb();
+        const run = (await listGenerationRuns()).find(r => r.id === input.runId);
+        if (!run)
+          throw new TRPCError({ code: "NOT_FOUND", message: "Generation run not found." });
+        const rows = (await listSessions()).filter(
+          row => row.session.generationRunId === run.id && row.session.status !== "cancelled"
+        );
+        const conflicts = new Set<string>();
+        for (const row of rows) {
+          const staffIds = (await getAssignments())
+            .filter(a => a.sessionId === row.session.id)
+            .map(a => a.staffId);
+          const issues = await findConflicts({
+            ...row.session,
+            staffIds,
+            id: row.session.id,
+          } as any);
+          issues.forEach(issue => conflicts.add(issue));
+        }
+        if (conflicts.size && !input.confirmClashes)
+        return {
+          runId: run.id,
+          published: false,
+          requiresConfirmation: true,
+          conflicts: Array.from(conflicts).slice(0, 12),
+          };
+        await saveSetting(`timetablePublished:${run.semester}`, run.id);
+        await saveSetting(`timetablePending:${run.semester}`, null);
+        const academic = await academicSettings();
+        const alreadyArchived = (await db.select().from(semesterArchives).where(eq(semesterArchives.generationRunId, run.id)).limit(1))[0];
+        if (!alreadyArchived) {
+          const allRunSessions = (await listSessions()).filter(row => row.session.generationRunId === run.id);
+          const assignments = await getAssignments();
+          const priorChanges = await db.select().from(timetableChangeHistory).where(and(eq(timetableChangeHistory.semester, run.semester), eq(timetableChangeHistory.academicYear, run.academicYear || academic.academicYear)));
+          const archiveInsert = await db.insert(semesterArchives).values({
+            academicYear: run.academicYear || academic.academicYear, semester: run.semester,
+            publishedBy: ctx.user.id, publisherName: ctx.user.name || ctx.user.email || "Administrator",
+            generationRunId: run.id, sessionCount: allRunSessions.length,
+            cancellationCount: allRunSessions.filter(row => row.session.status === "cancelled").length + priorChanges.filter(change => change.changeType === "cancellation").length,
+            changeCount: priorChanges.filter(change => change.changeType !== "cancellation").length,
+            finalStatus: conflicts.size ? "published-with-clashes" : "published",
+          });
+          const archiveId = Number((archiveInsert as any)[0]?.insertId);
+          if (archiveId && allRunSessions.length) await db.insert(archivedSessions).values(allRunSessions.map(row => {
+            const lecturerIds = assignments.filter(a => a.sessionId === row.session.id).map(a => a.staffId);
+            return { archiveId, sourceSessionId: row.session.id, academicYear: row.session.academicYear,
+              semester: semesterNumber(row.session.semester) || run.semester, program: row.session.program,
+              level: row.session.level, lecturerIds: JSON.stringify(lecturerIds), batch: row.session.batch,
+              snapshot: JSON.stringify({ ...row.session, room: row.room, lecturerIds }) };
+          }));
+        }
+        await publishNotice({
+          title: `Semester ${run.semester} timetable published`,
+          message: `The ${academic.academicYear} Semester ${run.semester} timetable is now published. Students and lecturers can view their updated timetables.`,
+          audience: "all",
+          authorId: ctx.user.id,
+          academicYear: run.academicYear || academic.academicYear,
+          semester: run.semester,
+        } as any);
+        return {
+          runId: run.id,
+          published: true,
+          requiresConfirmation: false,
+          conflicts: Array.from(conflicts),
+        };
+      }),
+    runs: adminProcedure.query(async () => {
+      const rows = (await listGenerationRuns())
         .sort((a, b) => b.id - a.id)
-        .slice(0, 20)
-        .map(run => {
+        .slice(0, 20);
+      return Promise.all(rows.map(async run => {
           let report: any = null;
           try {
             report = run.report ? JSON.parse(run.report) : null;
@@ -2158,6 +2252,15 @@ export const appRouter = router({
           }
           return {
             id: run.id,
+            published:
+              (await settingJson<number | null>(
+                `timetablePublished:${run.semester}`,
+                null
+              )) === run.id,
+            pending: await settingJson<{ message: string } | null>(
+              `timetablePending:${run.semester}`,
+              null
+            ),
             semester: run.semester,
             academicYear: run.academicYear,
             createdAt: run.createdAt,
@@ -2168,8 +2271,8 @@ export const appRouter = router({
             unscheduledList: report?.unscheduled || [],
             removed: report?.removed || 0,
           };
-        })
-    ),
+        }));
+    }),
     /** Pre-flight readiness check shown before generation. */
     readiness: adminProcedure
       .input(z.object({ semester: z.number().int().min(1).max(2) }))
@@ -2263,9 +2366,10 @@ export const appRouter = router({
           .optional()
       )
       .query(async ({ ctx, input }) => {
-        const rows = await enrichedSessions({
-          semester: input?.semester ?? null,
-        });
+        const rows = await enrichedSessions(
+          { semester: input?.semester ?? null },
+          ctx.user.role === "admin"
+        );
         return ctx.user.role === "student"
           ? rows.filter(row => studentCanSee(ctx.user, row))
           : rows;
@@ -2279,9 +2383,10 @@ export const appRouter = router({
           .optional()
       )
       .query(async ({ ctx, input }) => {
-        const rows = await enrichedSessions({
-          semester: input?.semester ?? null,
-        });
+        const rows = await enrichedSessions(
+          { semester: input?.semester ?? null },
+          ctx.user.role === "admin"
+        );
         if (ctx.user.role === "student")
           return rows.filter(row => studentCanSee(ctx.user, row));
         if (ctx.user.role === "lecturer") {
@@ -2335,6 +2440,10 @@ export const appRouter = router({
             .values(
               staffIds.map(staffId => ({ sessionId: insertId, staffId }))
             );
+        await markTimetableChangePending(
+          input.semester,
+          `A new ${input.subjectCode} session was added and is waiting for publication.`
+        );
         return insertId;
       }),
     update: schedulerProcedure
@@ -2367,6 +2476,10 @@ export const appRouter = router({
           await db
             .insert(sessionStaff)
             .values(staffIds.map(staffId => ({ sessionId: id, staffId })));
+        await markTimetableChangePending(
+          input.semester,
+          `${input.subjectCode} was modified and is waiting for publication.`
+        );
         return id;
       }),
     /** Lecture hall re-assignment for one session. */
@@ -2404,6 +2517,10 @@ export const appRouter = router({
           .update(sessions)
           .set({ roomId: input.roomId })
           .where(eq(sessions.id, input.id));
+        await markTimetableChangePending(
+          source.semester,
+          `${source.subjectCode} room assignment was changed and is waiting for publication.`
+        );
         return input.id;
       }),
     /** Lecturer re-assignment for one session. */
@@ -2444,6 +2561,10 @@ export const appRouter = router({
             .values(
               input.staffIds.map(staffId => ({ sessionId: input.id, staffId }))
             );
+        await markTimetableChangePending(
+          source.semester,
+          `${source.subjectCode} lecturer assignment was changed and is waiting for publication.`
+        );
         return input.id;
       }),
     duplicate: schedulerProcedure
@@ -2498,6 +2619,10 @@ export const appRouter = router({
             .values(
               staffIds.map(staffId => ({ sessionId: insertId, staffId }))
             );
+        await markTimetableChangePending(
+          source.semester,
+          `${source.subjectCode} was duplicated and is waiting for publication.`
+        );
         return insertId;
       }),
     reschedule: schedulerProcedure
@@ -2508,11 +2633,16 @@ export const appRouter = router({
           startTime: z.string(),
           endTime: z.string(),
           roomId: z.number().int().positive().nullable().optional(),
+          overrideTimeConstraints: z.boolean().default(false),
         })
       )
       .mutation(async ({ input, ctx }) => {
         await assertCanEditSession(ctx.user, input.id);
-        return applyReschedule(input);
+        return applyReschedule({
+          ...input,
+          overrideTimeConstraints:
+            ctx.user.role === "admin" && input.overrideTimeConstraints,
+        });
       }),
     convertSchedule: schedulerProcedure
       .input(
@@ -2534,6 +2664,10 @@ export const appRouter = router({
             status: "rescheduled",
           })
           .where(eq(sessions.id, input.id));
+        await markTimetableChangePending(
+          (await findSession(input.id))?.semester,
+          "A timetable schedule type was changed and is waiting for publication."
+        );
         return input.id;
       }),
     cancel: schedulerProcedure
@@ -2581,8 +2715,7 @@ export const appRouter = router({
           input.scope === "one"
             ? `${source.subjectCode} – ${source.subjectName} on ${input.occurrenceDate} is cancelled.${input.reason ? ` Reason: ${input.reason}` : ""}`
             : `${source.subjectCode} – ${source.subjectName} (${source.day} ${source.startTime}) is cancelled.${input.reason ? ` Reason: ${input.reason}` : ""}`;
-        await notifyConfigured("cancellation", "Session cancelled", message);
-        await notifySessionAudience(source, "Session cancelled", message);
+        await markTimetableChangePending(source.semester, message);
         return input.id;
       }),
     restore: schedulerProcedure
@@ -2613,6 +2746,10 @@ export const appRouter = router({
           .update(sessions)
           .set({ status: "scheduled" })
           .where(eq(sessions.id, input.id));
+        await markTimetableChangePending(
+          source.semester,
+          `${source.subjectCode} cancellation was restored and is waiting for publication.`
+        );
         return input.id;
       }),
     delete: adminProcedure
@@ -2812,10 +2949,49 @@ export const appRouter = router({
   }),
 
   // -------------------------------------------------------------------------
+  notifications: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const db = await requireDb();
+      return db.select().from(notifications).where(eq(notifications.recipientUserId, ctx.user.id)).orderBy(notifications.createdAt);
+    }),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const db = await requireDb();
+      const rows = await db.select().from(notifications).where(and(eq(notifications.recipientUserId, ctx.user.id), eq(notifications.isRead, 0)));
+      return rows.length;
+    }),
+    markRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      await db.update(notifications).set({ isRead: 1 }).where(and(eq(notifications.id, input.id), eq(notifications.recipientUserId, ctx.user.id)));
+      return true;
+    }),
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      const db = await requireDb();
+      await db.update(notifications).set({ isRead: 1 }).where(and(eq(notifications.recipientUserId, ctx.user.id), eq(notifications.isRead, 0)));
+      return true;
+    }),
+  }),
+  history: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const db = await requireDb();
+      const archives = await db.select().from(semesterArchives).orderBy(semesterArchives.publishedAt);
+      const snapshots = await db.select().from(archivedSessions);
+      const assignments = await getAssignments();
+      const staffRows = await listStaff();
+      let result = archives.map(archive => ({ ...archive, sessions: snapshots.filter(row => row.archiveId === archive.id).map(row => {
+        let session: any = {}; try { session = JSON.parse(row.snapshot); } catch {}
+        const lecturerIds = (() => { try { return JSON.parse(row.lecturerIds || "[]"); } catch { return []; } })();
+        return { ...session, lecturerIds, lecturerNames: lecturerIds.map((id: number) => staffRows.find(staff => staff.id === id)?.name || "Lecturer") };
+      }) }));
+      if (ctx.user.role === "student") result = result.map(archive => ({ ...archive, sessions: archive.sessions.filter((session: any) => studentCanSee(ctx.user, session)) })).filter(archive => archive.sessions.length);
+      if (ctx.user.role === "lecturer") { const me = await staffForUser(ctx.user); result = result.map(archive => ({ ...archive, sessions: archive.sessions.filter((session: any) => me && session.lecturerIds.includes(me.id)) })).filter(archive => archive.sessions.length); }
+      return result.sort((a,b) => new Date(b.publishedAt as any).getTime() - new Date(a.publishedAt as any).getTime());
+    }),
+  }),
   notices: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const today = new Date().toISOString().slice(0, 10);
       return (await listNotices())
+        .filter(notice => notice.publicationSource === "published")
         .map(notice => {
           let recipients: number[] = [];
           try {
@@ -2846,7 +3022,7 @@ export const appRouter = router({
             code: "FORBIDDEN",
             message: "Only administrators and lecturers can publish notices.",
           });
-        await publishNotice({ ...input, authorId: ctx.user.id });
+        await publishNotice({ ...input, authorId: ctx.user.id, displayOnNotices: true });
         const recipients = (await listUsers()).filter(
           user => input.audience === "all" || user.role === input.audience
         );
@@ -3093,6 +3269,7 @@ async function applyReschedule(input: {
   startTime: string;
   endTime: string;
   roomId?: number | null;
+  overrideTimeConstraints?: boolean;
 }) {
   const db = await requireDb();
   const source = await findSession(input.id);
@@ -3110,6 +3287,7 @@ async function applyReschedule(input: {
     roomId,
     id: input.id,
     staffIds,
+    ignoreTimeConstraints: input.overrideTimeConstraints,
   } as any);
   if (issues.length) {
     await notifyConfigured(
@@ -3131,8 +3309,7 @@ async function applyReschedule(input: {
     })
     .where(eq(sessions.id, input.id));
   const message = `${source.subjectCode} – ${source.subjectName} moved from ${source.day} ${source.startTime} to ${input.day} ${input.startTime}–${input.endTime}.`;
-  await notifyConfigured("reschedule", "Session rescheduled", message);
-  await notifySessionAudience(source, "Session rescheduled", message);
+  await markTimetableChangePending(source.semester, message);
   return input.id;
 }
 
